@@ -5,9 +5,9 @@
 #include "../../global/global.h"
 #include "../sensors.h"
 
-const int PIN_BOYA_BAJA = 27;
+const int PIN_BOYA_BAJA = 25;
 const int PIN_BOYA_MEDIA = 26;
-const int PIN_BOYA_ALTA = 25;
+const int PIN_BOYA_ALTA = 27;
 
 void setupBoyas()
 {

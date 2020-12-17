@@ -4,14 +4,8 @@
 #include <Wifi.h>
 #include <PubSubClient.h>
 
-// D21   = comunicación led rojo
-// D22   = comunicación led azul
-// D23   = comunicación led verde
-// D34   = comunicación led amarillo
-const uint8_t PIN_LED_COM_RED = 21;
-const uint8_t PIN_LED_COM_AZUL = 22;
+const uint8_t PIN_LED_COM_RED = 22;
 const uint8_t PIN_LED_COM_VERDE = 23;
-const uint8_t PIN_LED_COM_AMARILLO = 32;
 
 // Your WiFi connection credentials, if applicable
 const char *ssid = "cuartillo";
@@ -36,7 +30,6 @@ uint32_t RECCONECT_TIME = 10000;
 uint32_t lastMQTTReconnectAttempt = 0;
 uint8_t mqttReconnectAttempts = 0;
 
-bool publishedInit = false;
 bool publishedCommunication = true;
 bool publishedData = true;
 bool publishedWIFIData = true;
@@ -59,7 +52,6 @@ void publish();
 boolean mqttConnect();
 void readOrders(String payload[]);
 void readConfiguration(String payload[]);
-void publishInit();
 void publishCommunication();
 void publishData();
 void publishWIFIData();
@@ -73,9 +65,7 @@ void setupWIFI(TickType_t xLastWakeTimeP)
     xLastWakeTime = xLastWakeTimeP;
     printDebug("setupWIFI()");
     pinMode(PIN_LED_COM_RED, OUTPUT);
-    pinMode(PIN_LED_COM_AZUL, OUTPUT);
     pinMode(PIN_LED_COM_VERDE, OUTPUT);
-    pinMode(PIN_LED_COM_AMARILLO, OUTPUT);
 
     mqtt.setServer(broker, 1883);
     mqtt.setCallback(mqttCallback);
@@ -105,40 +95,27 @@ void loopWIFI()
 
 void initWIFI()
 {
-    digitalWrite(PIN_LED_COM_AMARILLO, LOW);
     digitalWrite(PIN_LED_COM_VERDE, LOW);
-    digitalWrite(PIN_LED_COM_AZUL, LOW);
-
     digitalWrite(PIN_LED_COM_RED, HIGH);
-    // vTaskDelayUntil(&xLastWakeTime, 5000);
 
-    // Nos conectamos a nuestra red Wifi
-    Serial.println();
-    Serial.print("Conectando a ");
-    Serial.println(ssid);
+    printDebug("Conectando a " + (String)ssid);
 
     WiFi.begin(ssid, password);
-
-    digitalWrite(PIN_LED_COM_RED, LOW);
-    digitalWrite(PIN_LED_COM_AMARILLO, HIGH);
-    // vTaskDelayUntil(&xLastWakeTime, 2000);
-    digitalWrite(PIN_LED_COM_AMARILLO, LOW);
 
     while (WiFi.status() != WL_CONNECTED)
     {
         digitalWrite(PIN_LED_COM_VERDE, HIGH);
-        // vTaskDelayUntil(&xLastWakeTime, 1000);
+        vTaskDelayUntil(&xLastWakeTime, 1000);
         digitalWrite(PIN_LED_COM_VERDE, LOW);
-        // vTaskDelayUntil(&xLastWakeTime, 1000);
+        vTaskDelayUntil(&xLastWakeTime, 1000);
         Serial.print(".");
     }
 
     digitalWrite(PIN_LED_COM_VERDE, HIGH);
+    digitalWrite(PIN_LED_COM_RED, LOW);
 
-    Serial.println("");
-    Serial.println("Conectado a red WiFi!");
-    Serial.println("Dirección IP: ");
-    Serial.println(WiFi.localIP());
+    printDebug("Conectado a la red WiFi! ");
+    SerialMon.println(WiFi.localIP());
 }
 
 void loopMQTT()
@@ -146,7 +123,6 @@ void loopMQTT()
 
     if (!mqtt.connected())
     {
-        digitalWrite(PIN_LED_COM_AZUL, LOW);
         if (!WiFi.isConnected())
         {
             initWIFI();
@@ -166,7 +142,6 @@ void loopMQTT()
     }
     else
     {
-        digitalWrite(PIN_LED_COM_AZUL, HIGH);
         publish();
     }
 
@@ -264,11 +239,6 @@ void subscribeOrder(String payloadS[])
 
 void publish()
 {
-    if (!publishedInit)
-    {
-        publishInit();
-        publishedInit = true;
-    }
     if (!publishedCommunication)
     {
         publishCommunication();
@@ -284,13 +254,6 @@ void publish()
         publishWIFIData();
         publishedWIFIData = true;
     }
-}
-
-void publishInit()
-{
-    char msg[] = "0";
-    mqtt.publish(topicPub, msg);
-    printDebug("publicado");
 }
 
 void publishCommunication()
@@ -329,7 +292,7 @@ void publishWIFIData()
     if (mqtt.connected())
     {
         String wifiLocalIP = (String)WiFi.localIP();
-        String payloadString = "8," + wifiLocalIP;
+        String payloadString = "3," + wifiLocalIP;
         printDebug(payloadString);
         char payload[payloadString.length()];
         payloadString.toCharArray(payload, payloadString.length() + 1);

@@ -5,7 +5,7 @@
 // PIN CONTADOR PULSOS
 const uint8_t PIN_COUNTER = 33;
 const uint32_t CHANGE_INTERVAL = 30000; // Intervalo para registrar un cambio (30 segundos)
-const uint8_t MIN_CHANGE = 5; // Valor mínimo en el cambio del caudal para lanzar un evento
+const uint8_t MIN_CHANGE = 5;           // Valor mínimo en el cambio del caudal para lanzar un evento
 
 /*
     t1 = marca de tiempo actual para cada iteración
@@ -17,14 +17,14 @@ const uint8_t MIN_CHANGE = 5; // Valor mínimo en el cambio del caudal para lanz
     pulse = lectura del pulso por pin digital
     restarInterval = intervalo para restar el caudal
     restar = cantidad a restar en cada iteración del intervalo para restar
-    caudalLast = caudal actual en cada iteración
+    caudalNew = caudal actual en cada iteración
 */
 unsigned long t1, t2, t3, interval, lastChange = 0;
 bool readed = false;
 int pulse = LOW;
 float restarInterval = 0.00;
 float restar = 0.00;
-float caudalLast = 0.00;
+float caudalNew = 0.00;
 
 /*
     Inicio del pin del contador como entrada
@@ -64,10 +64,10 @@ void loopContador(float &caudal, uint32_t &lectura, int &cambioCaudal)
             interval = (t1 - t2);
             if (interval != 0)
             {
-                caudalLast = (float)1000 * 1000 / interval;
-                restar = caudalLast / 10;
+                caudalNew = (float)1000 * 1000 / interval;
+                restar = caudalNew / 10;
                 restarInterval = interval / 10;
-                printDebug("Caudal: " + (String)caudalLast + " l/s, Lectura: " + (String)lectura + " m3");
+                printDebug("Caudal: " + (String)caudalNew + " l/s, Lectura: " + (String)lectura + " m3");
             }
             t2 = t1;
         }
@@ -99,37 +99,44 @@ void loopContador(float &caudal, uint32_t &lectura, int &cambioCaudal)
     if (t1 - t2 > interval && t1 - t3 > restarInterval && restarInterval > 1)
     {
         t3 = t1;
-        if (caudalLast >= 0)
+        if (caudalNew >= 0)
         {
-            if ((caudalLast - restar) <= 0)
+            if ((caudalNew - restar) <= 0)
             {
-                caudalLast = 0;
-                if (caudalLast != caudal)
+                caudalNew = 0;
+                if (caudalNew != caudal)
                 {
                     if (t1 - lastChange > CHANGE_INTERVAL)
                     {
                         lastChange = t1;
                         cambioCaudal = 1;
+                        // Actualizo el último caudal registrado al actual
+                        caudal = caudalNew;
                     }
                 }
             }
             else
             {
-                caudalLast -= restar;
+                caudalNew -= restar;
             }
         }
         else
         {
-            caudalLast = 0;
+            caudalNew = 0;
         }
     }
 
-    // Si el valor absoluto del caudal actual menos el anterior es mayor a 4.00 se lanza evento de cambio
-    if (abs(caudalLast - caudal) > MIN_CHANGE)
+    // Si el valor absoluto del caudal actual menos el anterior es mayor a 4.00 o
+    // el caudal es igual a 0 y el nuevo caudal es mayor a 0
+    if (abs(caudalNew - caudal) > MIN_CHANGE || (caudal == 0 && caudalNew > 0))
     {
-        cambioCaudal = 1;
+        // y si la marca actual menos la marca del último cambio registrado es mayor que el intervalo de cambio
+        if (t1 - lastChange > CHANGE_INTERVAL)
+        {
+            lastChange = t1;
+            cambioCaudal = 1;
+            // Actualizo el último caudal registrado al actual
+            caudal = caudalNew;
+        }
     }
-
-    // Actualizo el último caudal registrado al actual
-    caudal = caudalLast;
 }

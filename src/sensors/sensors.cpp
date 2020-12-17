@@ -19,11 +19,13 @@ int cambioElectrovalvula = 0;
 
 float pressure = 0;
 
+// Tamaño de memoria reservado para guardar datos
 uint8_t FLASH_SIZE = 50;
-
+// Posición en memoria para empezar a escribir
 uint8_t LECTURA_FLASH_POSITION = 0;
-
-uint32_t lastSaved;
+// Último guardado
+uint32_t lastSaved = 0;
+// Intervalo de persistencia
 uint16_t TIME_TO_SAVED = 1000;
 
 void loopSave();
